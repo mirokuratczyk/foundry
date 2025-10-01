@@ -18,6 +18,7 @@ use thiserror::Error;
 use tokio::sync::RwLock;
 use tower::Service;
 use url::Url;
+use foundry_config::Config;
 
 /// An enum representing the different transports that can be used to connect to a runtime.
 /// Only meant to be used internally by [RuntimeTransport].
@@ -161,10 +162,12 @@ impl RuntimeTransport {
 
     /// Creates a new reqwest client from this transport.
     pub fn reqwest_client(&self) -> Result<reqwest::Client, RuntimeTransportError> {
+        let config = Config::load().unwrap();
+        let accept_invalid_certs = self.accept_invalid_certs || config.eth_rpc_accept_invalid_certs;
         let mut client_builder = reqwest::Client::builder()
             .timeout(self.timeout)
             .tls_built_in_root_certs(self.url.scheme() == "https")
-            .danger_accept_invalid_certs(self.accept_invalid_certs);
+            .danger_accept_invalid_certs(accept_invalid_certs);
         let mut headers = reqwest::header::HeaderMap::new();
 
         // If there's a JWT, add it to the headers if we can decode it.
